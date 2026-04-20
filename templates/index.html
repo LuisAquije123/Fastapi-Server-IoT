@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Control de Riego</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            background: #0f172a;
+            color: white;
+        }
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .on { background: green; }
+        .off { background: red; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>💧 Sistema de Riego</h1>
+
+    <p><strong>Estado bomba:</strong> {{ estado }}</p>
+    <p><strong>Humedad:</strong> {{ humedad }}</p>
+
+    <button onclick="toggle()">Cambiar estado</button>
+</div>
+
+<script>
+function toggle() {
+    fetch('/toggle', { method: 'POST' })
+    .then(() => location.reload());
+}
+</script>
+
+</body>
+</html>
