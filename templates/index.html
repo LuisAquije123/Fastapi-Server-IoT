@@ -32,16 +32,24 @@
 <div class="card">
     <h1>💧 Sistema de Riego</h1>
 
-    <p><strong>Estado bomba:</strong> {{ estado }}</p>
-    <p><strong>Humedad:</strong> {{ humedad }}</p>
+   <p><strong>Estado bomba:</strong> <span id="estado">{{ estado }}</span></p>
+<p><strong>Humedad:</strong> <span id="humedad">{{ humedad }}</span></p>
 
     <button onclick="toggle()">Cambiar estado</button>
 </div>
 
 <script>
+const ws = new WebSocket("ws://" + location.host + "/ws");
+
+ws.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+
+    document.getElementById("estado").innerText = data.estado;
+    document.getElementById("humedad").innerText = data.humedad;
+};
+
 function toggle() {
-    fetch('/toggle', { method: 'POST' })
-    .then(() => location.reload());
+    fetch('/toggle', { method: 'POST' });
 }
 </script>
 
