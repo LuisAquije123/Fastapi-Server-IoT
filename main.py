@@ -1,71 +1,141 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from fastapi import WebSocket, WebSocketDisconnect
 
 app = FastAPI()
+
 templates = Jinja2Templates(directory="templates")
 
-# 🔥 Estado global (simulación)
-estado_bomba = False
-humedad_actual = 0
+# =========================================
+# ESTADO GLOBAL
+# =========================================
 
-# 📦 Modelo para humedad
-class Humedad(BaseModel):
-    valor: int
+estado_bomba = False
+
+telemetry = {
+    "soilHumidity": 0,
+    "temperature": 0,
+    "airHumidity": 0
+}
 
 clientes = []
 
+# =========================================
+# MODELO TELEMETRIA
+# =========================================
+
+class Telemetria(BaseModel):
+    soilHumidity: int
+    temperature: float
+    airHumidity: float
+
+# =========================================
+# WEBSOCKET
+# =========================================
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+
     await websocket.accept()
+
     clientes.append(websocket)
 
     try:
+
         while True:
             await websocket.receive_text()
+
     except WebSocketDisconnect:
+
         clientes.remove(websocket)
 
-async def broadcast():
-    for cliente in clientes:
-        await cliente.send_json({
-            "estado": estado_bomba,
-            "humedad": humedad_actual
-        })
+# =========================================
+# BROADCAST
+# =========================================
 
-# 🟢 Endpoint para cambiar estado (simula webhook)
+async def broadcast():
+
+    data = {
+        "relay": estado_bomba,
+        "soilHumidity": telemetry["soilHumidity"],
+        "temperature": telemetry["temperature"],
+        "airHumidity": telemetry["airHumidity"]
+    }
+
+    for cliente in clientes:
+
+        await cliente.send_json(data)
+
+# =========================================
+# TOGGLE RELE
+# =========================================
+
 @app.post("/toggle")
 async def toggle():
-    global estado_bomba
-    estado_bomba = not estado_bomba
-    await broadcast()
-    return {"estado": estado_bomba}
 
-# 🔵 Endpoint que consulta el ESP32
+    global estado_bomba
+
+    estado_bomba = not estado_bomba
+
+    await broadcast()
+
+    return {
+        "relay": estado_bomba
+    }
+
+# =========================================
+# ESTADO PARA ESP32
+# =========================================
+
 @app.get("/estado")
 def get_estado():
-    return {"activar": estado_bomba}
 
-# 🟡 Endpoint para recibir humedad
-@app.post("/humedad")
-async def recibir_humedad(data: Humedad):
-    global humedad_actual
-    humedad_actual = data.valor
+    return {
+        "activar": estado_bomba
+    }
+
+# =========================================
+# RECIBIR TELEMETRIA
+# =========================================
+
+@app.post("/telemetria")
+async def recibir(data: Telemetria):
+
+    global telemetry
+
+    telemetry = {
+        "soilHumidity": data.soilHumidity,
+        "temperature": data.temperature,
+        "airHumidity": data.airHumidity
+    }
+
     await broadcast()
-    return {"ok": True}
 
-# 🌐 Dashboard
+    return {
+        "ok": True
+    }
+
+# =========================================
+# DASHBOARD
+# =========================================
+
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "estado": estado_bomba,
-        "humedad": humedad_actual
-    })
 
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "relay": estado_bomba,
+            "telemetry": telemetry
+        }
+    )
+
+# =========================================
 
 if __name__ == "__main__":
+
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

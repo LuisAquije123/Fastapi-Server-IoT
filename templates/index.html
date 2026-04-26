@@ -1,56 +1,148 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
     <title>Control de Riego</title>
+
     <style>
+
         body {
             font-family: Arial;
             text-align: center;
             background: #0f172a;
             color: white;
         }
+
         .card {
+
             background: #1e293b;
-            padding: 20px;
-            border-radius: 10px;
+
+            padding: 30px;
+
+            border-radius: 15px;
+
             display: inline-block;
+
             margin-top: 50px;
+
+            min-width: 350px;
         }
+
+        .value {
+
+            font-size: 30px;
+
+            margin: 10px 0;
+        }
+
         button {
-            padding: 10px 20px;
+
+            padding: 12px 20px;
+
             font-size: 18px;
+
             border: none;
-            border-radius: 5px;
+
+            border-radius: 8px;
+
             cursor: pointer;
+
+            margin-top: 20px;
         }
-        .on { background: green; }
-        .off { background: red; }
+
     </style>
+
 </head>
+
 <body>
 
 <div class="card">
-    <h1>💧 Sistema de Riego</h1>
 
-   <p><strong>Estado bomba:</strong> <span id="estado">{{ estado }}</span></p>
-<p><strong>Humedad:</strong> <span id="humedad">{{ humedad }}</span></p>
+    <h1>🌱 Sistema IoT de Riego</h1>
 
-    <button onclick="toggle()">Cambiar estado</button>
+    <p>
+        <strong>⚡ Bomba:</strong>
+    </p>
+
+    <div class="value" id="relay">
+
+        {% if relay %}
+            ON
+        {% else %}
+            OFF
+        {% endif %}
+
+    </div>
+
+    <hr>
+
+    <p><strong>🌱 Humedad suelo</strong></p>
+
+    <div class="value" id="soilHumidity">
+        {{ telemetry.soilHumidity }}
+    </div>
+
+    <p><strong>🌡️ Temperatura</strong></p>
+
+    <div class="value" id="temperature">
+        {{ telemetry.temperature }}
+    </div>
+
+    <p><strong>💧 Humedad ambiente</strong></p>
+
+    <div class="value" id="airHumidity">
+        {{ telemetry.airHumidity }}
+    </div>
+
+    <button onclick="toggle()">
+
+        Cambiar estado
+
+    </button>
+
 </div>
 
 <script>
-const ws = new WebSocket("wss://" + location.host + "/ws");
+
+const ws = new WebSocket(
+    "wss://" + location.host + "/ws"
+);
 
 ws.onmessage = function(event) {
+
     const data = JSON.parse(event.data);
 
-    document.getElementById("estado").innerText = data.estado;
-    document.getElementById("humedad").innerText = data.humedad;
+    console.log(data);
+
+    // ======================
+    // RELE
+    // ======================
+
+    document.getElementById("relay").innerText =
+        data.relay ? "ON" : "OFF";
+
+    // ======================
+    // TELEMETRIA
+    // ======================
+
+    document.getElementById("soilHumidity").innerText =
+        data.soilHumidity;
+
+    document.getElementById("temperature").innerText =
+        data.temperature + " °C";
+
+    document.getElementById("airHumidity").innerText =
+        data.airHumidity + " %";
 };
 
-function toggle() {
-    fetch('/toggle', { method: 'POST' });
+async function toggle() {
+
+    await fetch("/toggle", {
+        method: "POST"
+    });
 }
+
 </script>
 
 </body>
