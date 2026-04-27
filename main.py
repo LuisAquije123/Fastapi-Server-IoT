@@ -1,9 +1,8 @@
-
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import Optional
+from typing import List
 
 app = FastAPI()
 
@@ -16,12 +15,13 @@ templates = Jinja2Templates(directory="templates")
 estado_bomba = False
 
 telemetry = {
-    "soilHumidity": 0,
-    "temperature": 0,
-    "airHumidity": None
+    "soilHumidity": 0,       # Humedad del suelo (%)
+    "soilTemperature": 0.0, # Temperatura del suelo (°C)
+    "airTemperature": 0.0,  # Temperatura del ambiente (°C)
+    "airHumidity": 0.0      # Humedad del aire (%)
 }
 
-clientes = []
+clientes: List[WebSocket] = []
 
 # =========================================
 # MODELO TELEMETRIA
@@ -29,8 +29,9 @@ clientes = []
 
 class Telemetria(BaseModel):
     soilHumidity: int
-    temperature: float
-    airHumidity: Optional[float] = None
+    soilTemperature: float
+    airTemperature: float
+    airHumidity: float
 
 # =========================================
 # WEBSOCKET
@@ -50,7 +51,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
 
-        clientes.remove(websocket)
+        if websocket in clientes:
+            clientes.remove(websocket)
 
 # =========================================
 # BROADCAST
@@ -60,8 +62,11 @@ async def broadcast():
 
     data = {
         "relay": estado_bomba,
+
         "soilHumidity": telemetry["soilHumidity"],
-        "temperature": telemetry["temperature"],
+        "soilTemperature": telemetry["soilTemperature"],
+
+        "airTemperature": telemetry["airTemperature"],
         "airHumidity": telemetry["airHumidity"]
     }
 
@@ -73,13 +78,13 @@ async def broadcast():
 
             await cliente.send_json(data)
 
-        except:
-
+        except Exception:
             disconnected.append(cliente)
 
     for cliente in disconnected:
 
-        clientes.remove(cliente)
+        if cliente in clientes:
+            clientes.remove(cliente)
 
 # =========================================
 # TOGGLE RELE
@@ -120,14 +125,19 @@ async def recibir(data: Telemetria):
 
     telemetry = {
         "soilHumidity": data.soilHumidity,
-        "temperature": data.temperature,
+
+        "soilTemperature": data.soilTemperature,
+
+        "airTemperature": data.airTemperature,
+
         "airHumidity": data.airHumidity
     }
 
     await broadcast()
 
     return {
-        "ok": True
+        "ok": True,
+        "telemetry": telemetry
     }
 
 # =========================================
