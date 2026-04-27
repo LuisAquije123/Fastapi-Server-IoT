@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 
@@ -51,6 +52,11 @@
             margin-top: 20px;
         }
 
+        hr {
+
+            margin: 20px 0;
+        }
+
     </style>
 
 </head>
@@ -62,7 +68,7 @@
     <h1>🌱 Sistema IoT de Riego</h1>
 
     <p>
-        <strong>⚡ Bomba:</strong>
+        <strong>⚡ Bomba</strong>
     </p>
 
     <div class="value" id="relay">
@@ -86,27 +92,26 @@
     <p><strong>🌡️ Temperatura</strong></p>
 
     <div class="value" id="temperature">
-        {{ telemetry.temperature }}
+        {{ telemetry.temperature }} °C
     </div>
 
-    <p><strong>💧 Humedad ambiente</strong></p>
-
-    <div class="value" id="airHumidity">
-        {{ telemetry.airHumidity }}
-    </div>
+    <hr>
 
     <button onclick="toggle()">
-
         Cambiar estado
-
     </button>
 
 </div>
 
 <script>
 
+const protocol =
+    location.protocol === "https:"
+        ? "wss://"
+        : "ws://";
+
 const ws = new WebSocket(
-    "wss://" + location.host + "/ws"
+    protocol + location.host + "/ws"
 );
 
 ws.onmessage = function(event) {
@@ -131,9 +136,6 @@ ws.onmessage = function(event) {
 
     document.getElementById("temperature").innerText =
         data.temperature + " °C";
-
-    document.getElementById("airHumidity").innerText =
-        data.airHumidity + " %";
 };
 
 async function toggle() {

@@ -1,7 +1,9 @@
+
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
@@ -16,7 +18,7 @@ estado_bomba = False
 telemetry = {
     "soilHumidity": 0,
     "temperature": 0,
-    "airHumidity": 0
+    "airHumidity": None
 }
 
 clientes = []
@@ -28,7 +30,7 @@ clientes = []
 class Telemetria(BaseModel):
     soilHumidity: int
     temperature: float
-    airHumidity: float
+    airHumidity: Optional[float] = None
 
 # =========================================
 # WEBSOCKET
@@ -63,9 +65,21 @@ async def broadcast():
         "airHumidity": telemetry["airHumidity"]
     }
 
+    disconnected = []
+
     for cliente in clientes:
 
-        await cliente.send_json(data)
+        try:
+
+            await cliente.send_json(data)
+
+        except:
+
+            disconnected.append(cliente)
+
+    for cliente in disconnected:
+
+        clientes.remove(cliente)
 
 # =========================================
 # TOGGLE RELE
@@ -138,4 +152,8 @@ if __name__ == "__main__":
 
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000
+    )
